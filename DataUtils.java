@@ -49,13 +49,7 @@ public class DataUtils {
 			scn.close();
 
 		} catch (FileNotFoundException | NullPointerException e) {
-
-			Alert alert = new Alert(AlertType.WARNING);
-			alert.setTitle(Environments.APP_TITTLE);
-			alert.setHeaderText("Abrir arquivo");
-			alert.setContentText(e.getLocalizedMessage());
-			alert.showAndWait();
-
+			messageError(e.getLocalizedMessage());
 		}
 
 	}
@@ -113,17 +107,8 @@ public class DataUtils {
 		} catch (
 
 		SQLException e) {
-
-			Alert alert = new Alert(AlertType.WARNING);
-			alert.setTitle(Environments.APP_TITTLE);
-			alert.setHeaderText("Erro ao executar SQL");
-			alert.setContentText(e.getLocalizedMessage());
-			alert.showAndWait();
-
-			e.printStackTrace();
-
+			messageError(e.getLocalizedMessage());
 			return;
-
 		}
 	}
 
