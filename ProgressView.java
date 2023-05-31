@@ -1,32 +1,44 @@
 package br.com.vener.javafx.csvimport;
 
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextAlignment;
 
 public class ProgressView extends Dialog<String> {
 
 	private ProgressBar progressBar;
-	private Label label;
+	private Label labelInformation;
+	private Label labelProgress;
 
 	public ProgressView(String information) {
 
 		progressBar = new ProgressBar();
 		progressBar.setMaxWidth(Double.MAX_VALUE);
 
-		// define o rótulo de informação
-		label = new Label(information);
+		// Define o rótulo de informação
+		labelInformation = new Label(information);
+		labelInformation.setTextAlignment(TextAlignment.CENTER);
+
+		// Define a saida de progresso
+		labelProgress = new Label();
+		HBox panelProgress = new HBox();
+		panelProgress.setAlignment(Pos.CENTER);
+		panelProgress.getChildren().addAll(new Label("Processo atual: "), labelProgress);
 
 		// Define o layout do dialago
 		VBox box = new VBox();
+		box.setAlignment(Pos.CENTER);
 		box.setPadding(new Insets(10.0));
 		box.setSpacing(10.0);
 
 		// Adiciona o rótulo e a barra de progressão ao layout
-		box.getChildren().addAll(label, progressBar);
+		box.getChildren().addAll(labelInformation, progressBar, labelProgress);
 
 		// define o painel do dialago
 		DialogPane dialogPane = new DialogPane();
@@ -41,11 +53,15 @@ public class ProgressView extends Dialog<String> {
 	}
 
 	public void setInformation(String information) {
-		label.setText(information);
+		labelInformation.setText(information);
 	}
 
 	public ProgressBar getProgressBar() {
 		return progressBar;
+	}
+
+	public Label getLabelProgress() {
+		return labelProgress;
 	}
 
 }

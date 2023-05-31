@@ -13,6 +13,7 @@ import java.util.Scanner;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -20,6 +21,8 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.VBox;
 
@@ -29,87 +32,244 @@ public class DataUtils {
 
 	public static void processFileRecords(File file) {
 
-		// Limpa a lista para receber novos registros
-		listData.clear();
+		// Define a informação de progresso
+		ProgressView progressView = new ProgressView("Importando os dados do arquivo " + file.getName());
 
-		try {
+		// Cria uma nova tarefa em segundo plano
+		Task<Void> task = new Task<Void>() {
 
-			// Abre o arquivo com o scanner
-			Scanner scn;
-			scn = new Scanner(file);
+			@Override
+			protected Void call() throws Exception {
 
-			// Percorre todo o arquivo e adiciona as lista a uma lista
-			String record;
-			while (scn.hasNextLine()) {
-				record = scn.nextLine();
-				listData.add(record);
+				// Limpa a lista para receber novos registros
+				listData.clear();
+
+				try {
+
+					// Abre o arquivo com o scanner
+					Scanner scn;
+					scn = new Scanner(file);
+
+					// Percorre todo o arquivo e adiciona as lista a uma lista
+					String record;
+					while (scn.hasNextLine()) {
+						record = scn.nextLine();
+						listData.add(record);
+					}
+
+					/// fecha o scanner
+					scn.close();
+
+				} catch (FileNotFoundException | NullPointerException e) {
+					messageError(e.getLocalizedMessage());
+				}
+
+				return null;
 			}
 
-			/// fecha o scanner
-			scn.close();
+		};
 
-		} catch (FileNotFoundException | NullPointerException e) {
-			messageError(e.getLocalizedMessage());
-		}
+		// Falha da tarefa
+		task.setOnFailed(te -> {
+			progressView.setInformation(te.getSource().getException().getLocalizedMessage());
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+		});
+
+		// Tarefa executada
+		task.setOnSucceeded(te -> {
+			progressView.setInformation("Arquivo importado com sucesso.");
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+			progressView.close();
+		});
+
+		new Thread(task).start();
+
+		progressView.showAndWait();
 
 	}
 
 	public static void processTableRecords(String tableName) {
 
-		// Limpa a lista para receber novos registros
-		listData.clear();
+		// Define a informação de progresso
+		ProgressView progressView = new ProgressView("Processando os dados da tabela " + tableName);
 
-		// Conecta ao banco de dados
-		Connection connector = ConnectorDB.getConnector().getConnection();
+		// Cria uma nova tarefa em segundo plano
 
-		// Define a declaração SQL DDL para criar tabela
-		String sql = "select * from `" + tableName + "`";
+		Task<Void> task = new Task<Void>() {
 
-		try {
+			@Override
+			protected Void call() throws Exception {
 
-			// Prepara a declarção SQL DDL
-			PreparedStatement statement = connector.prepareStatement(sql);
-			// Executa a declaração
-			ResultSet rs = statement.executeQuery();
+				// Limpa a lista para receber novos registros
+				listData.clear();
 
-			// Cria as colunas e insere os valores de cada registro
-			ResultSetMetaData metaData = rs.getMetaData();
-			String record = "";
+				// Conecta ao banco de dados
+				Connection connector = ConnectorDB.getConnector().getConnection();
 
-			// Percorre as colunas para montar a string de nomes
-			for (int i = 0; i < metaData.getColumnCount(); i++) {
-				if (i == 0) {
-					record = metaData.getColumnName(i + 1);
-				} else {
-					record += ";" + metaData.getColumnName(i + 1);
+				// Define a declaração SQL DDL para criar tabela
+				String sql = "select * from `" + tableName + "`";
+
+				try {
+
+					// Prepara a declarção SQL DDL
+					PreparedStatement statement = connector.prepareStatement(sql);
+					// Executa a declaração
+					ResultSet rs = statement.executeQuery();
+
+					// Cria as colunas e insere os valores de cada registro
+					ResultSetMetaData metaData = rs.getMetaData();
+					String record = "";
+
+					// Percorre as colunas para montar a string de nomes
+					for (int i = 0; i < metaData.getColumnCount(); i++) {
+						if (i == 0) {
+							record = metaData.getColumnName(i + 1);
+						} else {
+							record += ";" + metaData.getColumnName(i + 1);
+						}
+					}
+
+					// Adicionar a string de nomes as lista de dados
+					listData.add(record);
+
+					// Percorre os registros para montar uma string de registro
+					while (rs.next()) {
+
+						for (int i = 0; i < metaData.getColumnCount(); i++) {
+							if (i == 0) {
+								record = rs.getString(i + 1);
+							} else {
+								record += ";" + rs.getString(i + 1);
+							}
+
+						}
+
+						// Adiciona o registro as lista de dados
+						listData.add(record);
+					}
+
+				} catch (
+
+				SQLException e) {
+					messageError(e.getLocalizedMessage());
+					return null;
 				}
+
+				return null;
 			}
+		};
 
-			// Adicionar a string de nomes as lista de dados
-			listData.add(record);
+		// Falha da tarefa
+		task.setOnFailed(te -> {
+			progressView.setInformation(te.getSource().getException().getLocalizedMessage());
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+		});
 
-			// Percorre os registros para montar uma string de registro
-			while (rs.next()) {
+		// Tarefa executada
+		task.setOnSucceeded(te -> {
+			progressView.setInformation("Dados da tabela " + tableName + " processados com sucesso.");
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+			progressView.close();
+		});
 
-				for (int i = 0; i < metaData.getColumnCount(); i++) {
-					if (i == 0) {
-						record = rs.getString(i + 1);
-					} else {
-						record += ";" + rs.getString(i + 1);
+		new Thread(task).start();
+
+		progressView.showAndWait();
+
+	}
+
+	public static void fileToDB(String tableName, TableFile tableData, ToggleGroup delimiterGroup) {
+
+		// Retorna da quantidade de itens
+		final int totalItems = tableData.getItems().size();
+		;
+
+		// Define a informação de progresso
+		final ProgressView progressView = new ProgressView("Enviando dados para a tabela " + tableName);
+		final ProgressBar progressBar = progressView.getProgressBar();
+		final Label labelProgress = progressView.getLabelProgress();
+
+		Task<Void> task = new Task<Void>() {
+
+			@Override
+			protected Void call() throws Exception {
+
+				// Define qual o item atual
+				int curItem = 0;
+
+				// Lopping nos valores da tabela
+				for (String item : tableData.getItems()) {
+
+					// Incrementa o item atual
+					curItem++;
+
+					// Atualiza a progressão
+					updateProgress(curItem, totalItems);
+					updateMessage(curItem + " de " + totalItems);
+
+					// Separa a linha em valores de campos
+					String[] values = item.split(delimiterGroup.getSelectedToggle().getUserData().toString(), -1);
+
+					// Define os valores para a declaração DML
+					String sqlValues = "";
+					for (String value : values) {
+						sqlValues += "\"" + value + "\",";
+					}
+
+					// Necessário remover a última vírgula
+					sqlValues = sqlValues.substring(0, sqlValues.length() - 1);
+
+					// Define a declaração SQL DDL para criar tabela
+					String sql = "insert into `" + tableName + "` values(" + sqlValues + ")";
+
+					// Retorna a conexão com o banco de dados
+					Connection connector = ConnectorDB.getConnector().getConnection();
+
+					try {
+
+						// Prepara a declarção SQL DDL
+						PreparedStatement statement = connector.prepareStatement(sql);
+						// Executa a declaração
+						statement.execute();
+
+					} catch (SQLException e) {
+						DataUtils.messageError(e.getLocalizedMessage());
+						return null;
 					}
 
 				}
 
-				// Adiciona o registro as lista de dados
-				listData.add(record);
+				updateMessage("");
+				return null;
+
 			}
+		};
 
-		} catch (
+		// Falha da tarefa
+		task.setOnFailed(te -> {
+			progressView.setInformation(te.getSource().getException().getLocalizedMessage());
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+		});
 
-		SQLException e) {
-			messageError(e.getLocalizedMessage());
-			return;
-		}
+		// Tarefa executada
+		task.setOnSucceeded(te -> {
+
+			progressView.setInformation(totalItems + " registros inseridos na tabela " + tableName);
+			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
+
+			showTable(tableName);
+
+		});
+
+		// Define informações de progressão da operação
+		progressBar.progressProperty().bind(task.progressProperty());
+		labelProgress.textProperty().bind(task.messageProperty());
+
+		new Thread(task).start();
+
+		// Exibe a progressão da operação
+		progressView.showAndWait();
+
 	}
 
 	public static Dialog<String> listTables() {

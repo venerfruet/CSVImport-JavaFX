@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -94,7 +96,14 @@ public class ExporterObject extends Button {
 
 					// Cria o novo arquivo
 					if (newFile.createNewFile()) {
+
 						writeInFile(tableName, newFile);
+
+						Alert alert = new Alert(AlertType.INFORMATION);
+						alert.setTitle(Environments.APP_TITTLE);
+						alert.setHeaderText(tableName + " exportada para o arquivo " + newFile.getAbsolutePath());
+						alert.show();
+
 					}
 
 				} catch (IOException e1) {
@@ -118,10 +127,6 @@ public class ExporterObject extends Button {
 		// Abre o arquivo para inserção de dados
 		FileWriter fileWriter = new FileWriter(file);
 
-		// Define a barra de progressão
-		ProgressView progressView = new ProgressView("Aguarde... exportando tabela.");
-		progressView.show();
-
 		// Percore a lista de dados e insere no arquivo
 		for (String data : listData) {
 			fileWriter.write(data + "\n");
@@ -129,10 +134,6 @@ public class ExporterObject extends Button {
 
 		// Fecha o arquivo
 		fileWriter.close();
-
-		// Finaliza barra de progressão
-		progressView.setInformation("Tabela exportada.");
-		progressView.getDialogPane().getButtonTypes().addAll(ButtonType.OK);
 
 	}
 

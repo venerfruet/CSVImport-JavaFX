@@ -3,14 +3,12 @@ package br.com.vener.javafx.csvimport;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TextField;
@@ -204,6 +202,8 @@ public class PanelOptions extends VBox {
 		nameDialog.setTitle(Environments.APP_TITTLE);
 		nameDialog.setHeaderText("Digite uma nome para a tabela");
 
+		Button cancelDialog = (Button) nameDialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+		cancelDialog.setOnAction(null);
 		// Retorna a string nome da tabela
 		String nameTable = nameDialog.showAndWait().get();
 
@@ -231,7 +231,7 @@ public class PanelOptions extends VBox {
 			statement.execute();
 
 			// Insere os dados na nova tabela
-			fileToDB(nameTable);
+			DataUtils.fileToDB(nameTable, tableData, delimiterGroup);
 
 		} catch (SQLException e) {
 			DataUtils.messageError(e.getLocalizedMessage());
@@ -289,65 +289,11 @@ public class PanelOptions extends VBox {
 			String tableName = listView.getSelectionModel().getSelectedItem();
 
 			// Adiciona os valores da tabela no banco de dados
-			fileToDB(tableName);
+			DataUtils.fileToDB(tableName, tableData, delimiterGroup);
 
 		});
 
 		listTables.show();
-
-	}
-
-	private void fileToDB(String tableName) {
-
-		// Define a barra de progressão
-		ProgressView progressView = new ProgressView("Aguarde... importando dados.");
-		ProgressBar progressBar = progressView.getProgressBar();
-		progressView.show();
-
-		double progressMax = tableData.getItems().size() - 1;
-		double progressCur = 0.0;
-
-		// Lopping nos valores da tabela
-		for (String item : tableData.getItems()) {
-
-			double step = progressCur;
-			Platform.runLater(() -> progressBar.setProgress(step / progressMax));
-
-			// Separa a linha em valores de campos
-			String[] values = item.split(delimiterGroup.getSelectedToggle().getUserData().toString(), -1);
-
-			// Define os valores para a declaração DML
-			String sqlValues = "";
-			for (String value : values) {
-				sqlValues += "\"" + value + "\",";
-			}
-
-			// Necessário remover a última vírgula
-			sqlValues = sqlValues.substring(0, sqlValues.length() - 1);
-
-			// Define a declaração SQL DDL para criar tabela
-			String sql = "insert into `" + tableName + "` values(" + sqlValues + ")";
-
-			try {
-				// Prepara a declarção SQL DDL
-				PreparedStatement statement = connector().prepareStatement(sql);
-				// Executa a declaração
-				statement.execute();
-			} catch (SQLException e) {
-				DataUtils.messageError(e.getLocalizedMessage());
-				progressView.setInformation("Importação não concluída.");
-				progressView.getDialogPane().getButtonTypes().addAll(ButtonType.OK);
-				return;
-			}
-
-			progressCur++;
-
-		}
-
-		progressView.setInformation("Importação concluída.");
-		progressView.getDialogPane().getButtonTypes().addAll(ButtonType.OK);
-
-		DataUtils.showTable(tableName);
 
 	}
 

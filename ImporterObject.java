@@ -4,7 +4,6 @@ import java.io.File;
 
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ToggleGroup;
 import javafx.stage.FileChooser;
@@ -31,10 +30,6 @@ public class ImporterObject extends Button {
 			// Se existir um arquivo continua
 			if (file != null) {
 
-				// Define a barra de progressão
-				ProgressView progressView = new ProgressView("Aguarde... carregando dados.");
-				progressView.show();
-
 				// Associa os dados do arquivo a classe estática para serem usados em toda a
 				// aplicação
 				DataUtils.processFileRecords(file);
@@ -45,10 +40,6 @@ public class ImporterObject extends Button {
 
 				// Ativa o painel da tabela e as opções de manipulação dos dados
 				panelResult.setDisable(false);
-
-				// Finaliza barra de progressão
-				progressView.setInformation("Dados carregados.");
-				progressView.getDialogPane().getButtonTypes().addAll(ButtonType.OK);
 
 			}
 
