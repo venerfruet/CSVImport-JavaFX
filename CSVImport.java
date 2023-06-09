@@ -7,6 +7,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/**
+ * CSV Import
+ * Programa para importar para banco de dados arquivos delimitados e exportar para arquivo delimitado.
+ * @author Vener Fruet da Silveira
+ * @version 1.0.0
+ */
 public class CSVImport extends Application {
 
 	@Override

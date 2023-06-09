@@ -9,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
 import javafx.collections.FXCollections;
@@ -22,11 +23,20 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.VBox;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class DataUtils {
+
+	private static boolean errorInOperation = false;
 
 	private static List<String> listData = new ArrayList<>();
 
@@ -178,21 +188,25 @@ public class DataUtils {
 
 	}
 
-	public static void fileToDB(String tableName, TableFile tableData, ToggleGroup delimiterGroup) {
+	public static void fileToDB(String tableName, TableFile tableData, ToggleGroup delimiterGroup,
+			boolean removeTableOnError) {
 
 		// Retorna da quantidade de itens
 		final int totalItems = tableData.getItems().size();
-		;
+
+		errorInOperation = false;
 
 		// Define a informação de progresso
 		final ProgressView progressView = new ProgressView("Enviando dados para a tabela " + tableName);
 		final ProgressBar progressBar = progressView.getProgressBar();
 		final Label labelProgress = progressView.getLabelProgress();
 
-		Task<Void> task = new Task<Void>() {
+		Task<int[]> task = new Task<int[]>() {
+
+			int blankLines = 0;
 
 			@Override
-			protected Void call() throws Exception {
+			protected int[] call() throws Exception {
 
 				// Define qual o item atual
 				int curItem = 0;
@@ -222,6 +236,12 @@ public class DataUtils {
 					// Define a declaração SQL DDL para criar tabela
 					String sql = "insert into `" + tableName + "` values(" + sqlValues + ")";
 
+					// Ignora linha em branco
+					if (sqlValues.equals("\"\"")) {
+						blankLines++;
+						continue;
+					}
+
 					// Retorna a conexão com o banco de dados
 					Connection connector = ConnectorDB.getConnector().getConnection();
 
@@ -233,14 +253,30 @@ public class DataUtils {
 						statement.execute();
 
 					} catch (SQLException e) {
-						DataUtils.messageError(e.getLocalizedMessage());
+
+						if (removeTableOnError) {
+							// Prepara a declarção SQL DDL para remover a tabela
+							PreparedStatement statement = connector.prepareStatement("Drop table " + tableName);
+							// Executa a declaração
+							statement.execute();
+						}
+
+						// Retorna erro
+						errorInOperation = true;
+						updateMessage(e.getLocalizedMessage());
+
 						return null;
+
 					}
 
 				}
 
 				updateMessage("");
-				return null;
+
+				// Define a matriz de retorno 0=registros processados, 1=linhas em branco e
+				// 2=registros inseridos na tabela
+				int[] array = { totalItems, blankLines, totalItems - blankLines };
+				return array;
 
 			}
 		};
@@ -254,9 +290,25 @@ public class DataUtils {
 		// Tarefa executada
 		task.setOnSucceeded(te -> {
 
-			progressView.setInformation(totalItems + " registros inseridos na tabela " + tableName);
+			// Determina a quantidade de registros processados
+			int itemsAffected = errorInOperation ? 0 : task.getValue()[0];
+
+			// Define o texto de informação da operação
+			String information;
+			if (errorInOperation) {
+				information = itemsAffected + " registros processados.";
+			} else {
+				information = itemsAffected + " registro(s) processado(s).\n" + task.getValue()[1]
+						+ " linha(s) em branco ignorada(s).\n" + task.getValue()[2]
+						+ " registro(s) inserido(s) na tabela " + tableName + ".";
+			}
+
+			// Exibe a informação
+			progressView.setInformation(information);
+			// Exibe o botão OK
 			progressView.getDialogPane().getButtonTypes().add(ButtonType.OK);
 
+			// Exibe os dados na tabela
 			showTable(tableName);
 
 		});
@@ -301,8 +353,7 @@ public class DataUtils {
 			dialog.dialogPaneProperty().set(dialogPane);
 
 			// Retorna o nome das tabelas
-			Connection connector = ConnectorDB.getConnector().getConnection();
-			ResultSet rs = connector.getMetaData().getTables(null, null, null, null);
+			ResultSet rs = connector().getMetaData().getTables(null, null, null, null);
 			ObservableList<String> names = FXCollections.observableArrayList();
 			while (rs.next()) {
 				String name = rs.getString("TABLE_NAME");
@@ -319,6 +370,49 @@ public class DataUtils {
 		} catch (SQLException e) {
 			messageError(e.getLocalizedMessage());
 			return null;
+		}
+
+	}
+
+	public static void newTable(TableFile tableData, ToggleGroup delimiterGroup) {
+
+		// Solicita o nome para a tabela
+		TextInputDialog nameDialog = new TextInputDialog();
+		nameDialog.setTitle(Environments.APP_TITTLE);
+		nameDialog.setHeaderText("Digite uma nome para a tabela");
+
+		// Retorna a string nome da tabela
+		Optional<String> result = nameDialog.showAndWait();
+		String nameTable = result.isPresent() ? result.get() : "";
+
+		// Sai do método caso o nome da tabela esteja vazio
+		if (nameTable.equals(""))
+			return;
+
+		// Define a declarção dos campos
+		String fields = "";
+		for (TableColumn<String, ?> column : tableData.getColumns()) {
+			fields += "`" + column.getText() + "` varchar(255),";
+		}
+
+		// Necessário excluir a última vírgula
+		fields = fields.substring(0, fields.length() - 1);
+
+		// Define a declaração SQL DDL para criar tabela
+		String sql = "create table `" + nameTable + "` (" + fields + ")";
+
+		try {
+			// Prepara a declarção SQL DDL
+			PreparedStatement statement = connector().prepareStatement(sql);
+
+			// Executa a declaração
+			statement.execute();
+
+			// Insere os dados na nova tabela
+			fileToDB(nameTable, tableData, delimiterGroup, true);
+
+		} catch (SQLException e) {
+			messageError(e.getLocalizedMessage());
 		}
 
 	}
@@ -350,8 +444,17 @@ public class DataUtils {
 
 	}
 
+	public static Connection connector() {
+		// Obtém a conexão com o banco de dados
+		return ConnectorDB.getConnector().getConnection();
+	}
+
 	public static List<String> getListData() {
 		return listData;
+	}
+
+	public static void setListData(List<String> listData) {
+		DataUtils.listData = listData;
 	}
 
 }

@@ -4,9 +4,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
 public class ConnectorDB {
 
 	private Connection connection;
@@ -23,15 +24,8 @@ public class ConnectorDB {
 			connection = DriverManager.getConnection(strConn);
 
 		} catch (SQLException e) {
-
-			Alert alert = new Alert(AlertType.WARNING);
-			alert.setTitle(Environments.APP_TITTLE);
-			alert.setHeaderText("Erro ao conectar o banco de dados.");
-			alert.setContentText(e.getMessage());
-			alert.showAndWait();
-
+			DataUtils.messageError(e.getLocalizedMessage());
 			connection = null;
-
 		}
 
 	}

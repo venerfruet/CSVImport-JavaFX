@@ -7,6 +7,11 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class TableBD extends TableView<String> {
 
 	private List<String> linesData;

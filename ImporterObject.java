@@ -9,6 +9,11 @@ import javafx.scene.control.ToggleGroup;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class ImporterObject extends Button {
 
 	public ImporterObject(TableFile tableData, Stage stage, CheckBox columnNames, Node panelResult,

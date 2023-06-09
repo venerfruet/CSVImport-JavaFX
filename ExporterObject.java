@@ -15,6 +15,11 @@ import javafx.scene.layout.Pane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class ExporterObject extends Button {
 
 	public ExporterObject(Stage stage) {
@@ -71,7 +76,7 @@ public class ExporterObject extends Button {
 				// Recupera do nome da tabela
 				String tableName = listView.getSelectionModel().getSelectedItem();
 
-				// Sai se table não selecionada
+				// Sai se tabela não selecionada
 				if (tableName == null) {
 					DataUtils.messageError("Nenhuma tabale selecionada");
 					return;

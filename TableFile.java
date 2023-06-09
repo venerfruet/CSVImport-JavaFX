@@ -7,14 +7,25 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class TableFile extends TableView<String> {
 
 	public void populateColumns(List<String> linesData, boolean hasColumnNames, String delimiter) {
 
 		this.getColumns().clear();
 
+		// Testa se é um metacaracter
+		boolean isMetachar = delimiter.matches("[\\\\\\$\\%\\?\\(\\)\\[\\{\\*\\+\\.]+");
+
+		// Tratamento de metacaracter
+		final String finalDelimiter = isMetachar ? "\\" + delimiter : delimiter;
+
 		// Captura a primeira linha
-		String[] firstRow = linesData.get(0).split(delimiter);
+		String[] firstRow = linesData.get(0).split(finalDelimiter);
 
 		int indexColumnName = 1;
 
@@ -39,7 +50,7 @@ public class TableFile extends TableView<String> {
 
 				// cdf = fábrica de valores das células
 				String values = cdf.getValue();
-				String[] cells = values.split(delimiter);
+				String[] cells = values.split(finalDelimiter);
 
 				// Retorna o índice da coluna
 				int indexColumn = cdf.getTableView().getColumns().indexOf(cdf.getTableColumn());

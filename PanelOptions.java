@@ -1,8 +1,5 @@
 package br.com.vener.javafx.csvimport;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
@@ -10,13 +7,16 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
 
 public class PanelOptions extends VBox {
 
@@ -47,7 +47,7 @@ public class PanelOptions extends VBox {
 		defineOptionsDB(panelDB);
 
 		// Adiona os objetos ao painel de opções
-		getChildren().addAll(hasColumnNames, panelDelimiter, panelDB);
+		getChildren().addAll(hasColumnNames, panelDelimiter, defineTreatData(), panelDB);
 
 	}
 
@@ -105,7 +105,7 @@ public class PanelOptions extends VBox {
 		tabulation.setToggleGroup(delimiterGroup);
 
 		// Define o rótulo do painel de delimitação
-		Label labelDelimiters = new Label("Delimitador de campos: (requer nova importação)");
+		Label labelDelimiters = new Label("Delimitador de campos:");
 
 		// Adiciona o rótulo e as opções ao painel
 		panelDelimiter.getChildren().addAll(labelDelimiters, semicolon, comma, hash, tabulation, other);
@@ -128,8 +128,10 @@ public class PanelOptions extends VBox {
 		other.setUserData(otherText.getText());
 		other.setToggleGroup(delimiterGroup);
 
+		// Define o evento ao entrar na caixa de texto
 		otherText.focusedProperty().addListener((observable, oldValue, newValue) -> {
 			if (newValue)
+				// Marca opção outros como selecionado
 				other.setSelected(true);
 		});
 
@@ -142,7 +144,7 @@ public class PanelOptions extends VBox {
 				return;
 			}
 
-			// Não permite o literal de escape para o delimitador
+			// Não permite o caracteres especiais para o delimitador
 			if (newValue.substring(0, 1).equals("\\")) {
 				otherText.setText(oldValue);
 				return;
@@ -171,17 +173,42 @@ public class PanelOptions extends VBox {
 		return panelOther;
 	}
 
+	private Button defineTreatData() {
+
+		// Define o botão adicionar em tabela existente
+		Button buttonTreatData = new Button("Tratar os dados da lista");
+		buttonTreatData.setMaxWidth(Double.MAX_VALUE);
+
+		// Evento onClick do botão
+		buttonTreatData.setOnMouseClicked(e -> {
+
+			// Exibe o dialogo de tratamento dos daos
+			Dialog<Void> dialog = new Dialog<>();
+			dialog.setTitle(Environments.APP_TITTLE);
+			dialog.setDialogPane(new TreatDataPane(delimiterGroup.getSelectedToggle().getUserData().toString()));
+			dialog.showAndWait();
+
+			// Redefine a tabela dos dados importados
+			tableData.populateColumns(DataUtils.getListData(), hasColumnNames.isSelected(),
+					delimiterGroup.getSelectedToggle().getUserData().toString());
+
+		});
+
+		return buttonTreatData;
+
+	}
+
 	private void defineOptionsDB(Pane panelDB) {
 
 		// Define o botão adicionar em tabela existente
-		Button buttonAddInTable = new Button("Adicionar em uma tabela existente.");
+		Button buttonAddInTable = new Button("Adicionar em uma tabela existente");
 		buttonAddInTable.setOnMouseClicked(e -> {
-			listTables();
+			listTables(false);
 		});
 
 		// Define o botão criar tabela
-		Button buttonAddInNewTable = new Button("Adicionar em uma nova tabela.");
-		buttonAddInNewTable.setOnMouseClicked(e -> newTable());
+		Button buttonAddInNewTable = new Button("Adicionar em uma nova tabela");
+		buttonAddInNewTable.setOnMouseClicked(e -> DataUtils.newTable(tableData, delimiterGroup));
 
 		// Define o tamanho dos botões
 		buttonAddInTable.setMaxWidth(Double.MAX_VALUE);
@@ -195,51 +222,7 @@ public class PanelOptions extends VBox {
 
 	}
 
-	private void newTable() {
-
-		// Solicita o nome para a tabela
-		TextInputDialog nameDialog = new TextInputDialog();
-		nameDialog.setTitle(Environments.APP_TITTLE);
-		nameDialog.setHeaderText("Digite uma nome para a tabela");
-
-		Button cancelDialog = (Button) nameDialog.getDialogPane().lookupButton(ButtonType.CANCEL);
-		cancelDialog.setOnAction(null);
-		// Retorna a string nome da tabela
-		String nameTable = nameDialog.showAndWait().get();
-
-		// Sai do método caso o nome da tabela esteja vazio
-		if (nameTable.equals(""))
-			return;
-
-		// Define a declarção dos campos
-		String fields = "";
-		for (TableColumn<String, ?> column : tableData.getColumns()) {
-			fields += "`" + column.getText() + "` varchar(255),";
-		}
-
-		// Necessário excluir a última vírgula
-		fields = fields.substring(0, fields.length() - 1);
-
-		// Define a declaração SQL DDL para criar tabela
-		String sql = "create table `" + nameTable + "` (" + fields + ")";
-
-		try {
-			// Prepara a declarção SQL DDL
-			PreparedStatement statement = connector().prepareStatement(sql);
-
-			// Executa a declaração
-			statement.execute();
-
-			// Insere os dados na nova tabela
-			DataUtils.fileToDB(nameTable, tableData, delimiterGroup);
-
-		} catch (SQLException e) {
-			DataUtils.messageError(e.getLocalizedMessage());
-		}
-
-	}
-
-	private void listTables() {
+	public void listTables(boolean removeTableOnError) {
 
 		// Exibe o dialago selecionar tabela
 		Dialog<String> listTables = DataUtils.listTables();
@@ -289,17 +272,12 @@ public class PanelOptions extends VBox {
 			String tableName = listView.getSelectionModel().getSelectedItem();
 
 			// Adiciona os valores da tabela no banco de dados
-			DataUtils.fileToDB(tableName, tableData, delimiterGroup);
+			DataUtils.fileToDB(tableName, tableData, delimiterGroup, removeTableOnError);
 
 		});
 
 		listTables.show();
 
-	}
-
-	private Connection connector() {
-		// Obtém a conexão com o banco de dados
-		return ConnectorDB.getConnector().getConnection();
 	}
 
 	public CheckBox getHasColumnNames() {

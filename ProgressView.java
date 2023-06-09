@@ -10,6 +10,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
 
+/**
+@author Vener Fruet da Silveira
+* @version 1.0.0
+*/
+
 public class ProgressView extends Dialog<String> {
 
 	private ProgressBar progressBar;
@@ -17,6 +22,8 @@ public class ProgressView extends Dialog<String> {
 	private Label labelProgress;
 
 	public ProgressView(String information) {
+
+		setResizable(true);
 
 		progressBar = new ProgressBar();
 		progressBar.setMaxWidth(Double.MAX_VALUE);
@@ -27,6 +34,8 @@ public class ProgressView extends Dialog<String> {
 
 		// Define a saida de progresso
 		labelProgress = new Label();
+		labelProgress.setWrapText(true);
+		labelProgress.setMaxHeight(Double.MAX_VALUE);
 		HBox panelProgress = new HBox();
 		panelProgress.setAlignment(Pos.CENTER);
 		panelProgress.getChildren().addAll(new Label("Processo atual: "), labelProgress);
@@ -44,6 +53,7 @@ public class ProgressView extends Dialog<String> {
 		DialogPane dialogPane = new DialogPane();
 		dialogPane.setContent(box);
 		dialogPane.setPrefWidth(300.0);
+		dialogPane.setPrefHeight(200.0);
 		dialogPane.setPadding(new Insets(10.0));
 
 		// Define a janela do dialogo para exibir a barra de progressão
